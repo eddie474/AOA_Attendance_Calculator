@@ -52,15 +52,15 @@
                     <!-- Cancellations Input (Block Separated & Filtered) -->
                     <div>
                         <label for="cancellationInput" class="block text-lg font-semibold text-primary mb-2">CANCELLATIONS INPUT (Filtered by Reason)</label>
-                        <p class="text-xs text-gray-500 mb-1">Each **block of data** counts as **one** cancellation event. Only events containing **"student sick"** or **"student request"** are **counted**.</p>
+                        <p class="text-xs text-gray-500 mb-1">Each block of data counts as one cancellation event. Only events containing "student sick" or "student request" are counted.</p>
                         <textarea id="cancellationInput" oninput="calculateMetrics()" placeholder="Paste multi-line cancellation data here. Separate distinct events with a blank line (Enter twice)." class="w-full p-4 border-2 border-primary/30 rounded-lg focus:ring-red-500 focus:border-red-500 text-sm shadow-inner"></textarea>
                     </div>
 
                     <!-- Completed Flights Input (Pattern Counted - Unfiltered) -->
                     <div>
-                        <label for="completedInput" class="block text-lg font-semibold text-primary mb-2">COMPLETED FLIGHTS INPUT (Pattern Counted - Unfiltered)</label>
-                        <p class="text-xs text-gray-500 mb-1">Counts every **6-digit number** found between the words **"PIC"** and **"Rental"** (case-insensitive) as one completed flight.</p>
-                        <textarea id="completedInput" oninput="calculateMetrics()" placeholder="Paste flight record data here. The system will look for the PIC [######] Rental pattern." class="w-full p-4 border-2 border-primary/30 rounded-lg focus:ring-green-500 focus:border-green-500 text-sm shadow-inner"></textarea>
+                        <label for="completedInput" class="block text-lg font-semibold text-primary mb-2">COMPLETED SESSIONS INPUT (Pattern Counted - Unfiltered)</label>
+                        <p class="text-xs text-gray-500 mb-1">Counts every 6-digit number found between the words "PIC" and "Rental" as one completed flight.</p>
+                        <textarea id="completedInput" oninput="calculateMetrics()" placeholder="Paste flight record data here" class="w-full p-4 border-2 border-primary/30 rounded-lg focus:ring-green-500 focus:border-green-500 text-sm shadow-inner"></textarea>
                     </div>
                 </div>
             </div>

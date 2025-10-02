@@ -7,6 +7,8 @@
     
     <!-- FIX: Load Tailwind CSS CDN first -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Chart.js for advanced charting (Line Graph) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script> 
     
     <!-- Tailwind Configuration for Custom Colors (Dark Blue and Gold) -->
     <script>
@@ -43,32 +45,32 @@
         <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">AOA Student Metrics</h1>
         <p class="text-gray-600 mb-8">The summary metrics and pie chart will update instantly by counting events.</p>
 
-        <!-- Main Grid Layout -->
+        <!-- Main Grid Layout: Changed Input to col-span-1 and Summary/Charts to col-span-2 -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             
-            <!-- 1. Data Input Columns (LHS) -->
-            <div class="lg:col-span-2 space-y-8">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Cancellations Input (Block Separated & Filtered) -->
-                    <div>
-                        <label for="cancellationInput" class="block text-lg font-semibold text-primary mb-2">CANCELLATIONS</label>
-                        <p class="text-xs text-gray-500 mb-1">Each block of data counts as one cancellation event. Only events containing "student sick" or "student request" are counted.</p>
-                        <textarea id="cancellationInput" oninput="calculateMetrics()" placeholder="Paste multi-line cancellation data here" class="w-full p-4 border-2 border-primary/30 rounded-lg focus:ring-red-500 focus:border-red-500 text-sm shadow-inner"></textarea>
-                    </div>
+            <!-- 1. Data Input Columns (LHS) - Takes 1/3 on large screens -->
+            <div class="lg:col-span-1 space-y-8">
+                <!-- Inputs are stacked vertically for maximum readability in the narrower column -->
+                
+                <!-- Cancellations Input (Block Separated & Filtered) -->
+                <div>
+                    <label for="cancellationInput" class="block text-lg font-semibold text-primary mb-2">CANCELLATIONS</label>
+                    <p class="text-xs text-gray-500 mb-1">Each block of data counts as one cancellation event. Only events containing "student sick" or "student request" are counted.</p>
+                    <textarea id="cancellationInput" oninput="calculateMetrics()" placeholder="Paste multi-line cancellation data here" class="w-full p-4 border-2 border-primary/30 rounded-lg focus:ring-red-500 focus:border-red-500 text-sm shadow-inner"></textarea>
+                </div>
 
-                    <!-- Completed Flights Input (Pattern Counted - Unfiltered) -->
-                    <div>
-                        <label for="completedInput" class="block text-lg font-semibold text-primary mb-2">COMPLETED SESSIONS</label>
-                        <p class="text-xs text-gray-500 mb-1">Counts every 6-digit number found between the words "PIC" and "Rental" as one completed flight.</p>
-                        <textarea id="completedInput" oninput="calculateMetrics()" placeholder="Paste flight record data here" class="w-full p-4 border-2 border-primary/30 rounded-lg focus:ring-green-500 focus:border-green-500 text-sm shadow-inner"></textarea>
-                    </div>
+                <!-- Completed Flights Input (Pattern Counted - Unfiltered) -->
+                <div>
+                    <label for="completedInput" class="block text-lg font-semibold text-primary mb-2">COMPLETED SESSIONS</label>
+                    <p class="text-xs text-gray-500 mb-1">Counts every 6-digit number found between the words "PIC" and "Rental" as one completed flight.</p>
+                    <textarea id="completedInput" oninput="calculateMetrics()" placeholder="Paste flight record data here" class="w-full p-4 border-2 border-primary/30 rounded-lg focus:ring-green-500 focus:border-green-500 text-sm shadow-inner"></textarea>
                 </div>
             </div>
 
-            <!-- 2. Summary & Chart (RHS) -->
-            <div class="lg:col-span-1 space-y-8">
+            <!-- 2. Summary & Charts (RHS) - Takes 2/3 on large screens -->
+            <div class="lg:col-span-2 space-y-8">
                 
-                <!-- Summary Metrics (Columns E & F) -->
+                <!-- Summary Metrics (Full width of the 2/3 column) -->
                 <div class="bg-white p-6 rounded-xl summary-card">
                     <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">SUMMARY METRICS</h2>
                     
@@ -112,10 +114,21 @@
                     </div>
                 </div>
 
-                <!-- Pie Chart -->
-                <div class="bg-white p-6 rounded-xl summary-card">
-                    <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">Performance Distribution</h2>
-                    <canvas id="pieChart" class="w-full" style="max-height: 300px;"></canvas>
+                <!-- NEW GRID CONTAINER: Charts Side-by-Side on Medium/Large Screens -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    
+                    <!-- Line Chart for Weekly Trend (LEFT) -->
+                    <div class="bg-white p-6 rounded-xl summary-card">
+                        <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">Weekly Session Trend</h2>
+                        <canvas id="lineChart" class="w-full" style="max-height: 300px;"></canvas>
+                    </div>
+
+                    <!-- Pie Chart (RIGHT) -->
+                    <div class="bg-white p-6 rounded-xl summary-card">
+                        <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">Performance Distribution</h2>
+                        <canvas id="pieChart" class="w-full" style="max-height: 300px;"></canvas>
+                    </div>
+
                 </div>
             </div>
 
@@ -141,6 +154,9 @@
         const ctx = chartCanvas.getContext('2d');
         const cancellationFilteredOutCountEl = document.getElementById('cancellationFilteredOutCount'); 
         const weeklyAverageEl = document.getElementById('weeklyAverage'); // New element
+
+        // Chart.js instance variable
+        let lineChartInstance = null;
 
         /**
          * Counts event blocks separated by blank lines.
@@ -219,14 +235,11 @@
 
             const value = inputElement.value;
             // Regex to capture common date formats (e.g., MM/DD/YYYY, YYYY-MM-DD, M-D-YY)
-            // It tries to find strings that look like dates separated by / or -
             const dateRegex = /(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})|(\d{4}[-/]\d{1,2}[-/]\d{1,2})/g;
             const dateMatches = value.match(dateRegex);
 
             if (!dateMatches || dateMatches.length === 0) {
-                // Cannot calculate span without dates. Fallback to 0.0 or assume 1 week.
-                // Assuming 1 week is a better default if flights exist.
-                return completedCount; 
+                return completedCount; // Fallback: Assume 1 week if dates aren't found
             }
 
             // Convert date strings to Date objects, filtering out invalid dates
@@ -255,6 +268,131 @@
             return completedCount / numberOfWeeks;
         }
 
+        /**
+         * Groups completed sessions by week number (Sunday start) and distributes the total count.
+         * @param {number} completedCount 
+         * @param {HTMLTextAreaElement} inputElement 
+         * @returns {object} An object containing { labels: string[], data: number[] }.
+         */
+        function groupDataByWeek(completedCount, inputElement) {
+            const value = inputElement.value;
+            // Regex to capture common date formats
+            const dateRegex = /(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})|(\d{4}[-/]\d{1,2}[-/]\d{1,2})/g;
+            const dateMatches = value.match(dateRegex);
+            const weeklyData = {};
+
+            if (!dateMatches || completedCount === 0) return { labels: [], data: [] };
+
+            const validDates = dateMatches
+                .map(dateStr => new Date(dateStr))
+                .filter(date => !isNaN(date.getTime()));
+
+            if (validDates.length === 0) return { labels: [], data: [] };
+            
+            for (const date of validDates) {
+                // Find the start of the week (Sunday) for grouping
+                const dayOfWeek = date.getDay(); // 0 for Sunday, 6 for Saturday
+                const weekStartDate = new Date(date);
+                weekStartDate.setDate(date.getDate() - dayOfWeek);
+                
+                // Format the date as a consistent week label (e.g., 'MM/DD')
+                const label = weekStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                
+                if (weeklyData[label]) {
+                    weeklyData[label]++; // Count the date density in that week
+                } else {
+                    weeklyData[label] = 1;
+                }
+            }
+
+            // --- Distribution Logic ---
+            // Distribute the total 'completedCount' proportionally based on date density.
+            const totalDateDensity = Object.values(weeklyData).reduce((sum, count) => sum + count, 0);
+            const weeklySessionCounts = {};
+            
+            if (totalDateDensity > 0) {
+                for (const label in weeklyData) {
+                    const proportion = weeklyData[label] / totalDateDensity;
+                    // Assign a proportional number of completed sessions to this week.
+                    weeklySessionCounts[label] = Math.round(completedCount * proportion);
+                }
+            } else {
+                return { labels: [], data: [] };
+            }
+            
+            // Sort labels based on their date value
+            const sortedLabels = Object.keys(weeklySessionCounts).sort((a, b) => new Date(a) - new Date(b));
+            const data = sortedLabels.map(label => weeklySessionCounts[label]);
+
+            return { labels: sortedLabels, data: data };
+        }
+
+        /**
+         * Draws the line chart using Chart.js
+         * @param {object} weeklyTrendData { labels: string[], data: number[] }
+         */
+        function drawLineChart(weeklyTrendData) {
+            const canvas = document.getElementById('lineChart');
+            if (!canvas) return;
+            
+            const ctxLine = canvas.getContext('2d');
+
+            // Destroy old chart instance if it exists
+            if (lineChartInstance) {
+                lineChartInstance.destroy();
+            }
+            
+            const { labels, data } = weeklyTrendData;
+
+            lineChartInstance = new Chart(ctxLine, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Completed Sessions',
+                        data: data,
+                        borderColor: COLORS.COMPLETED, // Green for Completed
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        tension: 0.3, // Smooth lines
+                        borderWidth: 3,
+                        fill: true,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#192F59', // Dark Blue points
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Allows max-height in CSS to work
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        title: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Sessions Completed'
+                            },
+                            ticks: {
+                                // Ensure y-axis labels are integers
+                                callback: function(value) { if (value % 1 === 0) { return value; } return null; }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Week Starting Date'
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
         /**
          * The main function to calculate and update all metrics and the chart.
@@ -268,8 +406,9 @@
 
             const total = completed + cancelledIncluded;
             
-            // Calculate New Metric
+            // Calculate Metrics
             const weeklyAverage = calculateWeeklyAverage(completed, completedInput);
+            const weeklyTrendData = groupDataByWeek(completed, completedInput); 
             
             // Update Summary Table 
             completedCountEl.textContent = completed;
@@ -285,8 +424,9 @@
             }
             completionRateEl.textContent = `${rate.toFixed(1)}%`;
 
-            // Draw Chart 
+            // Draw Charts
             drawPieChart(completed, cancelledIncluded);
+            drawLineChart(weeklyTrendData); // Draw the new line chart
         }
 
         /**
@@ -336,7 +476,7 @@
             const cancelledAngle = cancelledRatio * Math.PI * 2;
             drawSlice(currentAngle, currentAngle + cancelledAngle, COLORS.CANCELLED);
 
-            // Helper functions
+            // Helper functions (defined locally to use 'center' and 'radius')
             function drawSlice(startAngle, endAngle, color) {
                 ctx.beginPath();
                 ctx.moveTo(center, center);

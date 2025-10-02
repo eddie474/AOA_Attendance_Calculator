@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AOA Attendance Tracker1</title>
+    
+    <!-- FIX: Load Tailwind CSS CDN first -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tailwind Configuration for Custom Colors (Dark Blue and Gold) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#192F59', // Deep Dark Blue
+                        gold: '#FFC72C',    // Bright Gold Accent
+                        // We keep red and green for the chart as they represent performance status
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        /* Custom styles for the input textareas to look like sheet columns */
+        textarea {
+            resize: none;
+            font-family: monospace;
+            min-height: 250px;
+        }
+        .summary-card {
+            /* Using a subtle shadow and dark blue border for definition */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(25, 47, 89, 0.1); /* Light Primary Border */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 sm:p-10 font-sans">
+
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">AOA Attendance Tracker1</h1>
+        <p class="text-gray-600 mb-8">Paste your flight data below. The summary metrics and pie chart will update instantly by counting events.</p>
+
+        <!-- Main Grid Layout -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <!-- 1. Data Input Columns (LHS) -->
+            <div class="lg:col-span-2 space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Cancellations Input (Block Separated & Filtered) -->
+                    <div>
+                        <label for="cancellationInput" class="block text-lg font-semibold text-primary mb-2">CANCELLATIONS INPUT (Filtered by Reason)</label>
+                        <p class="text-xs text-gray-500 mb-1">Each **block of data** counts as **one** cancellation event. Only events containing **"student sick"** or **"student request"** are **counted**.</p>
+                        <textarea id="cancellationInput" oninput="calculateMetrics()" placeholder="Paste multi-line cancellation data here. Separate distinct events with a blank line (Enter twice)." class="w-full p-4 border-2 border-primary/30 rounded-lg focus:ring-red-500 focus:border-red-500 text-sm shadow-inner"></textarea>
+                    </div>
+
+                    <!-- Completed Flights Input (Pattern Counted - Unfiltered) -->
+                    <div>
+                        <label for="completedInput" class="block text-lg font-semibold text-primary mb-2">COMPLETED FLIGHTS INPUT (Pattern Counted - Unfiltered)</label>
+                        <p class="text-xs text-gray-500 mb-1">Counts every **6-digit number** found between the words **"PIC"** and **"Rental"** (case-insensitive) as one completed flight.</p>
+                        <textarea id="completedInput" oninput="calculateMetrics()" placeholder="Paste flight record data here. The system will look for the PIC [######] Rental pattern." class="w-full p-4 border-2 border-primary/30 rounded-lg focus:ring-green-500 focus:border-green-500 text-sm shadow-inner"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Summary & Chart (RHS) -->
+            <div class="lg:col-span-1 space-y-8">
+                
+                <!-- Summary Metrics (Columns E & F) -->
+                <div class="bg-white p-6 rounded-xl summary-card">
+                    <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">SUMMARY METRICS</h2>
+                    
+                    <div class="space-y-3">
+                        <!-- Completed Flights -->
+                        <div class="flex justify-between items-center py-2 border-b">
+                            <span class="text-gray-700">Completed Flights</span>
+                            <span id="completedCount" class="font-bold text-gold text-xl">0</span>
+                        </div>
+                        
+                        <!-- Cancellations (INCLUDED COUNT) -->
+                        <div class="flex justify-between items-center py-2 border-b">
+                            <span class="text-gray-700">Cancellations (Counted)</span>
+                            <span id="cancellationCount" class="font-bold text-red-500 text-xl">0</span>
+                        </div>
+                        
+                        <!-- NEW: Cancellations Filtered Out (EXCLUDED COUNT) -->
+                        <div class="flex justify-between items-center py-2 border-b border-dashed">
+                            <span class="text-sm text-gray-500 italic">Cancellations Filtered Out</span>
+                            <span id="cancellationFilteredOutCount" class="font-medium text-gray-400 text-lg">0</span>
+                        </div>
+                        
+                        <!-- TOTAL FLIGHTS -->
+                        <div class="flex justify-between items-center py-3 mt-2 border-y-4 border-primary/70 bg-blue-50/50">
+                            <span class="font-extrabold text-primary text-lg">TOTAL FLIGHTS</span>
+                            <span id="totalCount" class="font-extrabold text-primary text-2xl">0</span>
+                        </div>
+
+                        <!-- Completion Rate -->
+                        <div class="flex justify-between items-center pt-2">
+                            <span class="text-gray-700 font-semibold">Completion Rate</span>
+                            <span id="completionRate" class="font-extrabold text-gold text-2xl">0%</span>
+                        </div>
+
+                        <!-- NEW: Average Flights Per Week -->
+                        <div class="flex justify-between items-center pt-2 border-t border-primary/20 mt-4">
+                            <span class="text-gray-700 font-semibold">Avg Flights Per Week</span>
+                            <span id="weeklyAverage" class="font-extrabold text-primary text-2xl">0.0</span>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Pie Chart -->
+                <div class="bg-white p-6 rounded-xl summary-card">
+                    <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">Performance Distribution</h2>
+                    <canvas id="pieChart" class="w-full" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Constants for the pie chart colors (Kept Green/Red for clear performance status)
+        const COLORS = {
+            COMPLETED: '#10B981', // Green-500 (Success)
+            CANCELLED: '#EF4444', // Red-500 (Warning/Danger)
+            BG: '#F9FAFB'
+        };
+
+        // DOM elements
+        const completedInput = document.getElementById('completedInput');
+        const cancellationInput = document.getElementById('cancellationInput');
+        const completedCountEl = document.getElementById('completedCount');
+        const cancellationCountEl = document.getElementById('cancellationCount');
+        const totalCountEl = document.getElementById('totalCount');
+        const completionRateEl = document.getElementById('completionRate');
+        const chartCanvas = document.getElementById('pieChart');
+        const ctx = chartCanvas.getContext('2d');
+        const cancellationFilteredOutCountEl = document.getElementById('cancellationFilteredOutCount'); 
+        const weeklyAverageEl = document.getElementById('weeklyAverage'); // New element
+
+        /**
+         * Counts event blocks separated by blank lines.
+         * ONLY INCLUDES blocks containing "student sick" or "student request".
+         * @param {HTMLTextAreaElement} inputElement 
+         * @returns {object} An object containing { includedCount, excludedCount }.
+         */
+        function countFilteredBlockEvents(inputElement) {
+            const value = inputElement.value.trim();
+            if (value.length === 0) {
+                return { includedCount: 0, excludedCount: 0 };
+            }
+            // Split by one or more blank lines (newline followed by optional whitespace and another newline)
+            const blocks = value.split(/\n\s*\n/);
+
+            let includedCount = 0;
+            let excludedCount = 0;
+            // Define the required keywords for inclusion
+            const requiredKeywords = ["student sick", "student request"];
+            
+            // Iterate over all blocks that are not empty
+            for (let i = 0; i < blocks.length; i++) {
+                const blockContent = blocks[i].trim();
+                
+                if (blockContent.length > 0) {
+                    const contentLower = blockContent.toLowerCase();
+                    let shouldInclude = false;
+                    
+                    // Check if the block contains ANY of the required inclusion phrases (case-insensitive)
+                    for (const keyword of requiredKeywords) {
+                        if (contentLower.includes(keyword)) {
+                            shouldInclude = true;
+                            break; // Stop checking keywords once one is found
+                        }
+                    }
+
+                    // Count the block based on the inclusion filter
+                    if (shouldInclude) {
+                        includedCount++; 
+                    } else {
+                        excludedCount++;
+                    }
+                }
+            }
+            // Return both counts as an object
+            return { includedCount, excludedCount };
+        }
+
+        /**
+         * Counts a specific 6-digit pattern between "PIC" and "Rental" (case-insensitive).
+         */
+        function countSpecificPattern(inputElement) {
+            const value = inputElement.value;
+            if (value.length === 0) {
+                return 0;
+            }
+            
+            // Regex: Looks for "PIC" followed by zero or more whitespace characters (\s*), 
+            // exactly six digits (\d{6}), zero or more whitespace characters, and then "Rental".
+            // The 'g' flag finds all matches, and 'i' makes it case-insensitive.
+            const regex = /PIC\s*\d{6}\s*Rental/gi;
+            
+            const matches = value.match(regex) || [];
+
+            return matches.length;
+        }
+
+        /**
+         * Calculates the average weekly flights based on the date range in the input.
+         * @param {number} completedCount 
+         * @param {HTMLTextAreaElement} inputElement 
+         * @returns {number} The calculated weekly average.
+         */
+        function calculateWeeklyAverage(completedCount, inputElement) {
+            if (completedCount === 0) return 0.0;
+
+            const value = inputElement.value;
+            // Regex to capture common date formats (e.g., MM/DD/YYYY, YYYY-MM-DD, M-D-YY)
+            // It tries to find strings that look like dates separated by / or -
+            const dateRegex = /(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})|(\d{4}[-/]\d{1,2}[-/]\d{1,2})/g;
+            const dateMatches = value.match(dateRegex);
+
+            if (!dateMatches || dateMatches.length === 0) {
+                // Cannot calculate span without dates. Fallback to 0.0 or assume 1 week.
+                // Assuming 1 week is a better default if flights exist.
+                return completedCount; 
+            }
+
+            // Convert date strings to Date objects, filtering out invalid dates
+            const validDates = dateMatches
+                .map(dateStr => new Date(dateStr))
+                .filter(date => !isNaN(date.getTime()));
+
+            if (validDates.length === 0) {
+                 return completedCount; // Fallback: Assume 1 week if dates were unparseable
+            }
+
+            const minDate = new Date(Math.min(...validDates));
+            const maxDate = new Date(Math.max(...validDates));
+            
+            const oneWeekInMs = 1000 * 60 * 60 * 24 * 7;
+            const diffTime = Math.abs(maxDate.getTime() - minDate.getTime());
+            
+            let numberOfWeeks = diffTime / oneWeekInMs;
+
+            // Ensure the denominator is at least 1 week if the flights happened on the same day/week.
+            if (numberOfWeeks < 1) {
+                numberOfWeeks = 1;
+            }
+
+            // Calculate the average
+            return completedCount / numberOfWeeks;
+        }
+
+
+        /**
+         * The main function to calculate and update all metrics and the chart.
+         */
+        function calculateMetrics() {
+            const completed = countSpecificPattern(completedInput);
+            
+            const cancellationResults = countFilteredBlockEvents(cancellationInput); 
+            const cancelledIncluded = cancellationResults.includedCount;
+            const cancelledExcluded = cancellationResults.excludedCount;
+
+            const total = completed + cancelledIncluded;
+            
+            // Calculate New Metric
+            const weeklyAverage = calculateWeeklyAverage(completed, completedInput);
+            
+            // Update Summary Table 
+            completedCountEl.textContent = completed;
+            cancellationCountEl.textContent = cancelledIncluded; 
+            cancellationFilteredOutCountEl.textContent = cancelledExcluded; 
+            totalCountEl.textContent = total;
+            weeklyAverageEl.textContent = weeklyAverage.toFixed(1); // Update new metric
+
+            // Update Completion Rate 
+            let rate = 0;
+            if (total > 0) {
+                rate = (completed / total) * 100;
+            }
+            completionRateEl.textContent = `${rate.toFixed(1)}%`;
+
+            // Draw Chart 
+            drawPieChart(completed, cancelledIncluded);
+        }
+
+        /**
+         * Counts completed flights using the specific pattern counter.
+         */
+        function countCompletedFlights(inputElement) {
+            return countSpecificPattern(inputElement);
+        }
+
+        /**
+         * Counts cancellation events using the filtered block counter.
+         */
+        function countCancellationEvents(inputElement) {
+            return countFilteredBlockEvents(inputElement);
+        }
+
+        /**
+         * Draws the pie chart based on completed and cancelled counts.
+         * @param {number} completed 
+         * @param {number} cancelled 
+         */
+        function drawPieChart(completed, cancelled) {
+            const total = completed + cancelled;
+            
+            // Clear the canvas
+            ctx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+
+            const center = chartCanvas.width / 2;
+            const radius = Math.min(chartCanvas.width, chartCanvas.height) / 2 - 10;
+            
+            if (total === 0) {
+                drawCircle(0, Math.PI * 2, COLORS.BG);
+                drawText('No Data', center, center, '#6B7280');
+                return;
+            }
+
+            let currentAngle = 0;
+
+            // 1. Draw Completed Slice (Green)
+            const completedRatio = completed / total;
+            const completedAngle = completedRatio * Math.PI * 2;
+            drawSlice(currentAngle, currentAngle + completedAngle, COLORS.COMPLETED);
+            currentAngle += completedAngle;
+
+            // 2. Draw Cancelled Slice (Red)
+            const cancelledRatio = cancelled / total;
+            const cancelledAngle = cancelledRatio * Math.PI * 2;
+            drawSlice(currentAngle, currentAngle + cancelledAngle, COLORS.CANCELLED);
+
+            // Helper functions
+            function drawSlice(startAngle, endAngle, color) {
+                ctx.beginPath();
+                ctx.moveTo(center, center);
+                ctx.arc(center, center, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+            }
+
+            function drawText(text, x, y, color) {
+                ctx.font = '20px sans-serif';
+                ctx.fillStyle = color;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text, x, y);
+            }
+            
+            function drawCircle(startAngle, endAngle, color) {
+                ctx.beginPath();
+                ctx.arc(center, center, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+            }
+        }
+
+        // Initial setup on load
+        window.onload = () => {
+            const size = 300;
+            chartCanvas.width = size;
+            chartCanvas.height = size;
+            calculateMetrics();
+        };
+    </script>
+</body>
+</html>

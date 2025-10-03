@@ -52,7 +52,7 @@
 
     <div class="max-w-7xl mx-auto">
         <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">AOA Student Metrics</h1>
-        <p class="text-gray-600 mb-2">The summary metrics and charts update instantly by counting events.</p>
+        <p class="text-gray-600 mb-2"></p>
         <!-- Dynamic Date/Time Display -->
         <p id="currentDateTime" class="text-sm text-gray-500 mb-8 font-semibold italic">Last Updated: Loading...</p>
 
@@ -78,7 +78,7 @@
 
                 <!-- Extra Curricular Input -->
                 <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-gold">
-                    <label for="extraCurricularInput" class="block text-lg font-semibold text-primary mb-2">Ground School / Ground Trainer</label>
+                    <label for="extraCurricularInput" class="block text-lg font-semibold text-primary mb-2">EXTRA CURRICULAR COUNT</label>
                     <p class="text-xs text-gray-500 mb-2">Enter the number of extra activities to boost the Average Sessions Per Week.</p>
                     <input type="number" id="extraCurricularInput" oninput="calculateMetrics()" value="0" min="0" class="w-full p-2 border border-gray-300 rounded-md focus:ring-gold focus:border-gold text-center text-xl font-bold">
                 </div>
@@ -89,7 +89,7 @@
                 
                 <!-- Summary Metrics (Full width of the 2/3 column) -->
                 <div class="bg-white p-6 rounded-xl summary-card">
-                    <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">STUDENT METRICS</h2>
+                    <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">METRICS</h2>
                     
                     <div class="space-y-3">
                         
@@ -107,7 +107,7 @@
                         
                         <!-- Extra Curricular Count Display -->
                         <div class="flex justify-between items-center py-2 border-b border-dashed">
-                            <span class="text-gray-700 font-medium italic">Ground School / Ground Trainer</span>
+                            <span class="text-gray-700 font-medium italic">Extra Curricular Count</span>
                             <span id="extraCurricularCountDisplay" class="font-bold text-green-500 text-lg">0</span>
                         </div>
                         
@@ -148,7 +148,7 @@
                         
                         <!-- Cancellations Filtered Out (EXCLUDED COUNT) -->
                         <div class="flex justify-between items-center py-2 border-b border-dashed">
-                            <span class="text-sm text-gray-500 italic">Filtered Cancellations</span>
+                            <span class="text-sm text-gray-500 italic">Unrecognized Cancel Blocks</span>
                             <span id="cancellationFilteredOutCount" class="font-medium text-gray-400 text-lg">0</span>
                         </div>
                         
@@ -158,10 +158,11 @@
                             <span id="totalCount" class="font-extrabold text-primary text-2xl">0</span>
                         </div>
 
-                        <!-- Completion Rate (Reverted to standard completion rate) -->
+                        <!-- Completion Rate (Color-coded based on performance) -->
                         <div class="flex justify-between items-center pt-2">
                             <span class="text-gray-700 font-semibold">Attendance Rate</span>
-                            <span id="completionRate" class="font-extrabold text-gold text-2xl">0%</span>
+                            <!-- attendanceRateColorClass will be set by JS -->
+                            <span id="completionRate" class="font-extrabold text-gold text-2xl attendanceRateColorClass">0%</span>
                         </div>
 
                         <!-- Average Flights Per Week (NOW INCLUDES EXTRA CURRICULAR COUNT) -->
@@ -184,7 +185,7 @@
 
                     <!-- Pie Chart (RIGHT) -->
                     <div class="bg-white p-6 rounded-xl summary-card">
-                        <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">Performance Distribution</h2>
+                        <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">Attendance</h2>
                         <canvas id="pieChart" class="w-full" style="max-height: 300px;"></canvas>
                     </div>
 
@@ -215,8 +216,8 @@
         // DOM elements for Cancellation Breakdown
         const sickCountEl = document.getElementById('sickCount');
         const requestCountEl = document.getElementById('requestCount');
-        const weatherCountDisplayEl = document.getElementById('weatherCountDisplay'); // NEW
-        const maintenanceCountDisplayEl = document.getElementById('maintenanceCountDisplay'); // NEW
+        const weatherCountDisplayEl = document.getElementById('weatherCountDisplay'); 
+        const maintenanceCountDisplayEl = document.getElementById('maintenanceCountDisplay'); 
 
         const cancellationCountEl = document.getElementById('cancellationCount');
         const totalCountEl = document.getElementById('totalCount');
@@ -252,7 +253,7 @@
             
             if (dateTimeElement) {
                 // Update the text to show the time
-                dateTimeElement.textContent = `Last Calculated: ${formattedDateTime}`;
+                dateTimeElement.textContent = ` ${formattedDateTime}`;
             }
         }
 
@@ -308,15 +309,15 @@
 
             let sickCount = 0;
             let requestCount = 0;
-            let weatherCount = 0; // NEW COUNT
-            let maintenanceCount = 0; // NEW COUNT
+            let weatherCount = 0; 
+            let maintenanceCount = 0; 
             let excludedCount = 0;
 
             // Define all keywords
             const SICK_KEYWORDS = ["student sick", "ill", "fatigue", "not feeling well", "unwell"];
             const REQUEST_KEYWORDS = ["student request", "out of town", "vacation"];
-            const WEATHER_KEYWORDS = ["weather"]; // NEW
-            const MAINTENANCE_KEYWORDS = ["maintenance", "no aircraft available"]; // NEW
+            const WEATHER_KEYWORDS = ["weather"]; 
+            const MAINTENANCE_KEYWORDS = ["maintenance", "no aircraft available"]; 
             
             // Iterate over all non-empty blocks
             for (const blockContent of blocks) {
@@ -520,6 +521,21 @@
                 }
             });
         }
+        
+        /**
+         * Applies the correct Tailwind CSS class based on the completion rate percentage.
+         * @param {number} rate The calculated completion rate (0-100).
+         * @returns {string} The Tailwind CSS color class.
+         */
+        function getRateColorClass(rate) {
+            if (rate < 80) {
+                return 'text-red-500';
+            } else if (rate >= 80 && rate <= 85) {
+                return 'text-yellow-600';
+            } else {
+                return 'text-green-600';
+            }
+        }
 
         /**
          * The main function to calculate and update all metrics and the chart.
@@ -534,8 +550,8 @@
             const cancellationResults = countFilteredBlockEvents(cancellationInput); 
             const sickIncluded = cancellationResults.sickCount;
             const requestIncluded = cancellationResults.requestCount;
-            const weatherIncluded = cancellationResults.weatherCount; // NEW
-            const maintenanceIncluded = cancellationResults.maintenanceCount; // NEW
+            const weatherIncluded = cancellationResults.weatherCount; 
+            const maintenanceIncluded = cancellationResults.maintenanceCount; 
             const cancelledExcluded = cancellationResults.excludedCount;
             
             // Only Student Sick and Student Request count against total sessions/rate.
@@ -555,6 +571,15 @@
             const weeklyAverage = calculateWeeklyAverage(totalActivityCount, completedInput); 
             const weeklyTrendData = groupDataByWeek(completedTotal, completedInput); 
             
+            // Calculate Completion Rate (using base completedTotal / totalScheduled)
+            let rate = 0;
+            if (totalScheduled > 0) {
+                rate = (completedTotal / totalScheduled) * 100;
+            }
+
+            // Determine the color class based on the rate
+            const rateColorClass = getRateColorClass(rate);
+            
             // Update Summary Table 
             flightCountEl.textContent = completedFlights;
             groundCountEl.textContent = completedGrounds;
@@ -562,19 +587,16 @@
 
             sickCountEl.textContent = sickIncluded;
             requestCountEl.textContent = requestIncluded;
-            weatherCountDisplayEl.textContent = weatherIncluded; // NEW DISPLAY
-            maintenanceCountDisplayEl.textContent = maintenanceIncluded; // NEW DISPLAY
+            weatherCountDisplayEl.textContent = weatherIncluded; 
+            maintenanceCountDisplayEl.textContent = maintenanceIncluded; 
 
-            cancellationCountEl.textContent = cancelledIncluded; // Total of fault-based cancellations
+            cancellationCountEl.textContent = cancelledIncluded; 
             cancellationFilteredOutCountEl.textContent = cancelledExcluded; 
             totalCountEl.textContent = totalScheduled; 
             weeklyAverageEl.textContent = weeklyAverage.toFixed(1); 
             
-            // Completion Rate (using base completedTotal / totalScheduled)
-            let rate = 0;
-            if (totalScheduled > 0) {
-                rate = (completedTotal / totalScheduled) * 100;
-            }
+            // Apply color class and update text content
+            completionRateEl.className = `font-extrabold text-2xl ${rateColorClass}`;
             completionRateEl.textContent = `${rate.toFixed(1)}%`;
 
             // Draw Charts

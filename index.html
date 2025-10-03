@@ -37,6 +37,15 @@
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
             border: 1px solid rgba(25, 47, 89, 0.1); /* Light Primary Border */
         }
+        /* Style for the new number input */
+        #extraCurricularInput {
+            -moz-appearance: textfield; /* Firefox */
+        }
+        #extraCurricularInput::-webkit-outer-spin-button,
+        #extraCurricularInput::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
     </style>
 </head>
 <body class="bg-gray-100 p-4 sm:p-10 font-sans">
@@ -45,7 +54,7 @@
         <h1 class="text-3xl sm:text-4xl font-extrabold text-primary mb-2">AOA Student Metrics</h1>
         <p class="text-gray-600 mb-2">The summary metrics and charts update instantly by counting events.</p>
         <!-- Dynamic Date/Time Display -->
-        <p id="currentDateTime" class="text-sm text-gray-500 mb-8 font-semibold italic">Last Updated: Loading...</p>
+        <p id="currentDateTime" class="text-sm text-gray-500 mb-8 font-semibold italic"> Loading...</p>
 
         <!-- Main Grid Layout: Changed Input to col-span-1 and Summary/Charts to col-span-2 -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -56,15 +65,22 @@
                 <!-- Cancellations Input (Block Separated & Filtered) -->
                 <div>
                     <label for="cancellationInput" class="block text-lg font-semibold text-primary mb-2">CANCELLATIONS</label>
-                    <p class="text-xs text-gray-500 mb-1">Each block counts as one event. Classified as Sick ("student sick", "**ill**", "**fatigue**", "**not feeling well**", "**unwell**") or Request ("student request", "**out of town**", "**vacation**").</p>
+                    <p class="text-xs text-gray-500 mb-1"></p>
                     <textarea id="cancellationInput" oninput="calculateMetrics()" placeholder="Paste multi-line cancellation data here" class="w-full p-4 border-2 border-primary/30 rounded-lg focus:ring-red-500 focus:border-red-500 text-sm shadow-inner"></textarea>
                 </div>
 
                 <!-- Completed Flights Input (Pattern Counted - Unfiltered) -->
                 <div>
                     <label for="completedInput" class="block text-lg font-semibold text-primary mb-2">COMPLETED SESSIONS</label>
-                    <p class="text-xs text-gray-500 mb-1">Counts every line containing a "PIC...Rental" signature. Sessions are classified as **Flights** if they contain "**172**" anywhere on that line.</p>
+                    <p class="text-xs text-gray-500 mb-1"></p>
                     <textarea id="completedInput" oninput="calculateMetrics()" placeholder="Paste flight record data here" class="w-full p-4 border-2 border-primary/30 rounded-lg focus:ring-green-500 focus:border-green-500 text-sm shadow-inner"></textarea>
+                </div>
+
+                <!-- NEW: Extra Curricular Input -->
+                <div class="bg-white p-4 rounded-lg shadow-md border-t-4 border-gold">
+                    <label for="extraCurricularInput" class="block text-lg font-semibold text-primary mb-2">Ground School / Ground Trainer</label>
+                    <p class="text-xs text-gray-500 mb-2">Enter the number of extra activities to boost the Average Sessions Per Week.</p>
+                    <input type="number" id="extraCurricularInput" oninput="calculateMetrics()" value="0" min="0" class="w-full p-2 border border-gray-300 rounded-md focus:ring-gold focus:border-gold text-center text-xl font-bold">
                 </div>
             </div>
 
@@ -73,13 +89,13 @@
                 
                 <!-- Summary Metrics (Full width of the 2/3 column) -->
                 <div class="bg-white p-6 rounded-xl summary-card">
-                    <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">SUMMARY METRICS</h2>
+                    <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">METRICS</h2>
                     
                     <div class="space-y-3">
                         
                         <!-- Completed Flights (172-sessions) -->
                         <div class="flex justify-between items-center py-2 border-b">
-                            <span class="text-gray-700">Completed Flights (172-sessions)</span>
+                            <span class="text-gray-700">Completed Flights</span>
                             <span id="flightCount" class="font-bold text-green-600 text-xl">0</span>
                         </div>
 
@@ -89,19 +105,25 @@
                             <span id="groundCount" class="font-bold text-gold text-xl">0</span>
                         </div>
                         
-                        <!-- NEW: Total Cancellations Header (now displays the sum of included reasons) -->
+                        <!-- Extra Curricular Count Display -->
+                        <div class="flex justify-between items-center py-2 border-b border-dashed">
+                            <span class="text-gray-700 font-medium italic">Extra Curricular Count</span>
+                            <span id="extraCurricularCountDisplay" class="font-bold text-green-500 text-lg">0</span>
+                        </div>
+                        
+                        <!-- Total Cancellations Header (now displays the sum of included reasons) -->
                         <div class="flex justify-between items-center py-2 border-b bg-red-50/50 rounded-md">
                             <span class="font-semibold text-red-700">TOTAL CANCELLATIONS</span>
                             <span id="cancellationCount" class="font-extrabold text-red-700 text-xl">0</span>
                         </div>
                         
-                        <!-- NEW: Breakdown - Student Sick -->
+                        <!-- Breakdown - Student Sick -->
                         <div class="flex justify-between items-center py-1 border-b">
                             <span class="text-gray-600 ml-3 text-sm">Reason: Student Sick</span>
                             <span id="sickCount" class="font-bold text-red-500 text-base">0</span>
                         </div>
 
-                        <!-- NEW: Breakdown - Student Request -->
+                        <!-- Breakdown - Student Request -->
                         <div class="flex justify-between items-center py-1 border-b">
                             <span class="text-gray-600 ml-3 text-sm">Reason: Student Request</span>
                             <span id="requestCount" class="font-bold text-red-500 text-base">0</span>
@@ -113,21 +135,21 @@
                             <span id="cancellationFilteredOutCount" class="font-medium text-gray-400 text-lg">0</span>
                         </div>
                         
-                        <!-- TOTAL SESSIONS (remains the grand total) -->
+                        <!-- TOTAL SESSIONS (reverted label for clarity) -->
                         <div class="flex justify-between items-center py-3 mt-2 border-y-4 border-primary/70 bg-blue-50/50">
                             <span class="font-extrabold text-primary text-lg">TOTAL SESSIONS</span>
                             <span id="totalCount" class="font-extrabold text-primary text-2xl">0</span>
                         </div>
 
-                        <!-- Completion Rate -->
+                        <!-- Completion Rate (Reverted to standard completion rate) -->
                         <div class="flex justify-between items-center pt-2">
-                            <span class="text-gray-700 font-semibold">Completion Rate</span>
+                            <span class="text-gray-700 font-semibold">Attendance Rate</span>
                             <span id="completionRate" class="font-extrabold text-gold text-2xl">0%</span>
                         </div>
 
-                        <!-- Average Flights Per Week -->
+                        <!-- Average Flights Per Week (NOW INCLUDES EXTRA CURRICULAR COUNT) -->
                         <div class="flex justify-between items-center pt-2 border-t border-primary/20 mt-4">
-                            <span class="text-gray-700 font-semibold">AVG Sessions Per Week</span>
+                            <span class="text-gray-700 font-semibold">AVG Total Sessions Per Week</span>
                             <span id="weeklyAverage" class="font-extrabold text-primary text-2xl">0.0</span>
                         </div>
 
@@ -145,7 +167,7 @@
 
                     <!-- Pie Chart (RIGHT) -->
                     <div class="bg-white p-6 rounded-xl summary-card">
-                        <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">Performance Distribution</h2>
+                        <h2 class="text-xl font-bold text-primary mb-4 border-b pb-2">Attendance Chart</h2>
                         <canvas id="pieChart" class="w-full" style="max-height: 300px;"></canvas>
                     </div>
 
@@ -166,12 +188,14 @@
         // DOM elements
         const completedInput = document.getElementById('completedInput');
         const cancellationInput = document.getElementById('cancellationInput');
+        const extraCurricularInput = document.getElementById('extraCurricularInput'); 
         
         // DOM elements for the split counts
         const flightCountEl = document.getElementById('flightCount');
         const groundCountEl = document.getElementById('groundCount');
+        const extraCurricularCountDisplayEl = document.getElementById('extraCurricularCountDisplay'); 
 
-        // NEW DOM elements for Cancellation Breakdown
+        // DOM elements for Cancellation Breakdown
         const sickCountEl = document.getElementById('sickCount');
         const requestCountEl = document.getElementById('requestCount');
 
@@ -298,13 +322,13 @@
         }
 
         /**
-         * Calculates the average weekly flights based on the date range in the input.
-         * @param {number} completedTotal 
-         * @param {HTMLTextAreaElement} inputElement 
+         * Calculates the average weekly sessions based on the total activity (completed + extra).
+         * @param {number} totalActivityCount The sum of completed sessions PLUS extra curricular.
+         * @param {HTMLTextAreaElement} inputElement The completed sessions input (for date range detection).
          * @returns {number} The calculated weekly average.
          */
-        function calculateWeeklyAverage(completedTotal, inputElement) {
-            if (completedTotal === 0) return 0.0;
+        function calculateWeeklyAverage(totalActivityCount, inputElement) {
+            if (totalActivityCount === 0) return 0.0;
 
             const value = inputElement.value;
             // Regex to capture common date formats (e.g., MM/DD/YYYY, YYYY-MM-DD, M-D-YY)
@@ -312,7 +336,7 @@
             const dateMatches = value.match(dateRegex);
 
             if (!dateMatches || dateMatches.length === 0) {
-                return completedTotal; // Fallback: Assume 1 week if dates aren't found
+                return totalActivityCount; // Fallback: Assume 1 week if dates aren't found
             }
 
             // Convert date strings to Date objects, filtering out invalid dates
@@ -321,7 +345,7 @@
                 .filter(date => !isNaN(date.getTime()));
 
             if (validDates.length === 0) {
-                 return completedTotal; // Fallback: Assume 1 week if dates were unparseable
+                 return totalActivityCount; // Fallback: Assume 1 week if dates were unparseable
             }
 
             const minDate = new Date(Math.min(...validDates));
@@ -338,7 +362,7 @@
             }
 
             // Calculate the average
-            return completedTotal / numberOfWeeks;
+            return totalActivityCount / numberOfWeeks;
         }
 
         /**
@@ -471,50 +495,57 @@
          * The main function to calculate and update all metrics and the chart.
          */
         function calculateMetrics() {
-            // Get flight and ground counts
+            // Get core counts
             const sessionCounts = countCompletedTypes(completedInput);
             const completedFlights = sessionCounts.flightCount;
             const completedGrounds = sessionCounts.groundCount;
             const completedTotal = completedFlights + completedGrounds; 
             
-            // NEW: Get cancellation breakdown
             const cancellationResults = countFilteredBlockEvents(cancellationInput); 
             const sickIncluded = cancellationResults.sickCount;
             const requestIncluded = cancellationResults.requestCount;
             const cancelledExcluded = cancellationResults.excludedCount;
             
-            // Calculate total included cancellations
             const cancelledIncluded = sickIncluded + requestIncluded;
+            
+            // Get Extra Curricular Count
+            const extraCurricularCount = parseInt(extraCurricularInput.value) || 0;
+            
+            // Total Scheduled Sessions (Denominator for rate calculation)
+            const totalScheduled = completedTotal + cancelledIncluded; 
 
-            const total = completedTotal + cancelledIncluded; // Total sessions (completed + cancelled)
+            // Total Activity Count (Completed + Extra Curricular) for AVG Sessions
+            const totalActivityCount = completedTotal + extraCurricularCount;
             
             // Calculate Metrics
-            const weeklyAverage = calculateWeeklyAverage(completedTotal, completedInput);
+            // UPDATED: AVG Sessions Per Week now uses the totalActivityCount
+            const weeklyAverage = calculateWeeklyAverage(totalActivityCount, completedInput); 
+            
             const weeklyTrendData = groupDataByWeek(completedTotal, completedInput); 
             
             // Update Summary Table 
             flightCountEl.textContent = completedFlights;
             groundCountEl.textContent = completedGrounds;
+            extraCurricularCountDisplayEl.textContent = extraCurricularCount; 
 
-            // Update new breakdown metrics
             sickCountEl.textContent = sickIncluded;
             requestCountEl.textContent = requestIncluded;
 
-            cancellationCountEl.textContent = cancelledIncluded; // Update the total cancellation header
+            cancellationCountEl.textContent = cancelledIncluded; 
             cancellationFilteredOutCountEl.textContent = cancelledExcluded; 
-            totalCountEl.textContent = total;
-            weeklyAverageEl.textContent = weeklyAverage.toFixed(1); // Update new metric
+            totalCountEl.textContent = totalScheduled; 
+            weeklyAverageEl.textContent = weeklyAverage.toFixed(1); 
             
-            // Update Completion Rate 
+            // UPDATED: Completion Rate (now using base completedTotal / totalScheduled)
             let rate = 0;
-            if (total > 0) {
-                rate = (completedTotal / total) * 100;
+            if (totalScheduled > 0) {
+                rate = (completedTotal / totalScheduled) * 100;
             }
             completionRateEl.textContent = `${rate.toFixed(1)}%`;
 
             // Draw Charts
-            drawPieChart(completedTotal, cancelledIncluded);
-            drawLineChart(weeklyTrendData); // Draw the new line chart
+            drawPieChart(completedTotal, cancelledIncluded); 
+            drawLineChart(weeklyTrendData); 
         }
 
         /**
